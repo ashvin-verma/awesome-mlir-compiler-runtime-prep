@@ -166,6 +166,12 @@ This is the heart of the list.
   **Coverage:** MLIR Core, GPU/Triton  
   **Why it matters:** End-to-end toy compiler path that reaches PTX. Best used after basic MLIR familiarity.
 
+### Autotuning and compiler search
+
+- **[P1] [Magellan: Autonomous Discovery of Novel Compiler Optimization Heuristics with AlphaEvolve](https://arxiv.org/abs/2601.21096)**  
+  **Coverage:** MLIR Core, Adjacent  
+  **Why it matters:** Shows how evolutionary search over compiler transformation sequences can discover non-obvious optimization heuristics that outperform hand-tuned ones. Increasingly relevant to accelerate pace of compiler development for new hardware architectures.
+
 ### Adjacent, not first-pass core
 
 - **[P2] [Neural Networks](https://www.stephendiehl.com/posts/mlir_neural_networks/)**  
@@ -246,6 +252,64 @@ This branch is extremely valuable for GPU compiler and accelerator roles.
 - **[P1] [Gluon: Explicit Performance](https://www.lei.chat/posts/gluon-explicit-performance/)**  
   **Coverage:** GPU/Triton, Runtime  
   **Why it matters:** Best for reasoning about portability vs performance and why domain-specific systems sometimes expose explicit controls instead of hiding them behind generic abstractions.
+
+### MLIR dialects and IRs targeting accelerators
+
+These are the vendor-specific MLIR dialects and IRs that sit between high-level codegen and hardware binaries. Knowing at least two helps to reason about dialect and transformation choices made by its authors.
+
+#### NVIDIA
+
+- **[P1] [TileIR Documentation](https://docs.nvidia.com/cuda/tile-ir/latest/sections/introduction.html)**  
+  **Coverage:** GPU/Triton, MLIR Core  
+  **Why it matters:** Official introduction to NVIDIA's new MLIR-based IR for CUDA. Defines the tile abstraction and how it composes with the existing CUDA execution model.
+
+- **[P1] [NVIDIA TileIR Internals: from CuTile to MLIR/LLVM to SASS](https://maknee.github.io/blog/2026/NVIDIA-TileIR-Internals-from-CuTile-to-MLIR-LLVM-to-SASS/)**  
+  **Coverage:** GPU/Triton, MLIR Core, LLVM/Backend  
+  **Why it matters:** Independent deep dive on TileIR by inspection: traces the full lowering from CuTile abstractions through MLIR dialects to LLVM IR and final SASS. 
+
+- **[P1] [TileIR LLVM Dev Meeting Talk (Springer, 2026)](https://llvm.org/devmtg/2026-04/slides/mlir/mlir_springer.pdf)**  
+  **Coverage:** GPU/Triton, MLIR Core  
+  **Why it matters:** Conference talk slides explaining TileIR's design rationale and where it sits relative to the existing CUDA/MLIR stack. 
+
+#### AMD
+
+- **[P1] [AMDGPU Dialect](https://mlir.llvm.org/docs/Dialects/AMDGPU/)**  
+  **Coverage:** GPU/Triton, MLIR Core  
+  **Why it matters:** Upstream MLIR wrappers for AMD CDNA/RDNA matrix instructions (MFMA, WMMA, scaled WMMA for FP4/FP8). AMD equivalent to the nvgpu dialect.
+
+- **[P1] [ROCDL Dialect](https://mlir.llvm.org/docs/Dialects/ROCDLDialect/)**  
+  **Coverage:** GPU/Triton, LLVM/Backend  
+  **Why it matters:** Upstream AMD intrinsic wrappers, the final MLIR lowering stop before HSACO (compiled AMDGPU binary). AMD equivalent to NVVM.
+
+#### AMD NPU (XDNA / AIE)
+
+- **[P1] [Xilinx/mlir-aie](https://github.com/Xilinx/mlir-aie)**  
+  **Coverage:** MLIR Core, Runtime  
+  **Why it matters:** Close-to-metal MLIR toolchain for AMD AI Engine cores (Ryzen AI NPU). Defines the AIE dialect for spatial operations on the AIE-array. The IRON Python API sits on top. Spatial, tile-based architecture rather than a SIMT one.
+
+- **[P1] [From Loop Nests to Silicon: Mapping AI Workloads onto AMD NPUs with MLIR-AIR (arXiv 2510.14871)](https://arxiv.org/abs/2510.14871)**  
+  **Coverage:** MLIR Core, Runtime, Kernel Design  
+  **Why it matters:** Introduces MLIR-AIR, a higher-level abstraction over mlir-aie that adds the AIR dialect for async and hierarchical operations across compute and memory. Achieves 78.7% compute efficiency on matmul and implements fused multi-head attention in ~150 LOC. 
+
+- **[P1] [amd/Triton-XDNA](https://github.com/amd/Triton-XDNA)**  
+  **Coverage:** GPU/Triton, MLIR Core  
+  **Why it matters:** Lowers standard Triton kernels to AMD NPU hardware via triton-shared (Linalg) → MLIR Transform dialect → MLIR-AIR/AIE → XRT binary. Achieves performance parity with handwritten NPU kernels on dense matmul. 
+
+#### Qualcomm Hexagon NPU
+
+- **[P1] [qualcomm/hexagon-mlir](https://github.com/qualcomm/hexagon-mlir)**  
+  **Coverage:** MLIR Core, GPU/Triton  
+  **Why it matters:** Open-source MLIR-based compiler stack targeting Qualcomm Hexagon NPUs. Compiles Triton kernels and PyTorch models to NPU binaries through structured MLIR passes. Good example of IREE-to-NPU compilation flow, in active development.
+
+- **[P1] [Hexagon-MLIR: An AI Compilation Stack for Qualcomm NPUs (arXiv 2602.19762)](https://arxiv.org/abs/2602.19762)**  
+  **Coverage:** MLIR Core, Kernel Design  
+  **Why it matters:** Companion paper. Covers the pass pipeline, how mega-kernels are generated to maximize locality in tightly coupled memory, and why library-based approaches leave bandwidth on the table. 
+
+#### Tenstorrent
+
+- **[P1] [tenstorrent/tt-mlir](https://github.com/tenstorrent/tt-mlir)**  
+  **Coverage:** MLIR Core, Runtime  
+  **Why it matters:** Open-source MLIR compiler for Tenstorrent's Wormhole and Blackhole chips: 2D mesh of RISC-V tile processors connected by an on-chip NoC. Defines custom TTIR dialects lowering through TTNN. 
 
 ### Useful companions
 
@@ -595,6 +659,10 @@ Easyperf is one of the best “measure first, reason second, then tune” resour
   **Coverage:** GPU/Triton, Kernel Design  
   **Why it matters:** One of the best resources for understanding hierarchical tiling on GPUs: threadblock tiles, warp tiles, thread tiles, and how memory hierarchy shapes kernel structure.
 
+- **[P0] [How to Optimize a CUDA Matmul Kernel for cuBLAS-like Performance](https://siboehm.com/articles/22/CUDA-MMM)** 
+  **Coverage:** GPU/Triton, Kernel Design, Perf/Arch  
+  **Why it matters:** A great step-by-step CUDA kernel optimization walkthrough available. Goes from a naive implementation to near-cuBLAS performance through tiling, shared memory staging, vectorized loads, and warp tiling.
+
 - **[P1] [Optimizing Compile Times for CUDA C++](https://developer.nvidia.com/blog/optimizing-compile-times-for-cuda-c/)**  
   **Coverage:** GPU/Triton, LLVM/Backend  
   **Why it matters:** Good compiler-engineering complement to the kernel-design material. Useful for thinking about build-time cost, template-heavy code, and toolchain behavior in CUDA-heavy stacks.
@@ -654,6 +722,7 @@ If you already know the MLIR/IREE basics and want the smallest high-signal set f
 - [Improving performance by better code locality.](https://easyperf.net/blog/2018/07/09/Improving-performance-by-better-code-locality)
 - [Memory Profiling Part 1. Introduction](https://easyperf.net/blog/2024/02/12/Memory-Profiling-Part1)
 - [Efficient GEMM in CUDA](https://docs.nvidia.com/cutlass/latest/media/docs/cpp/efficient_gemm.html)
+- [How to Optimize a CUDA Matmul Kernel for cuBLAS-like Performance](https://siboehm.com/articles/22/CUDA-MMM)
 - [IREE Data-Tiling Walkthrough](https://github.com/iree-org/iree/blob/main/docs/website/docs/community/blog/posts/data-tiling-walkthrough.md?plain=1)
 - [IREE Microkernels](https://github.com/iree-org/iree/blob/main/docs/website/docs/community/blog/posts/microkernels.md)
 
@@ -753,5 +822,16 @@ If you want the list to stay comprehensive but still have a clean place to start
 - [Improving performance by better code locality.](https://easyperf.net/blog/2018/07/09/Improving-performance-by-better-code-locality)
 - [Memory Profiling Part 1. Introduction](https://easyperf.net/blog/2024/02/12/Memory-Profiling-Part1)
 - [Efficient GEMM in CUDA](https://docs.nvidia.com/cutlass/latest/media/docs/cpp/efficient_gemm.html)
+- [How to Optimize a CUDA Matmul Kernel for cuBLAS-like Performance](https://siboehm.com/articles/22/CUDA-MMM)
 - [IREE Data-Tiling Walkthrough](https://github.com/iree-org/iree/blob/main/docs/website/docs/community/blog/posts/data-tiling-walkthrough.md?plain=1)
 - [IREE Microkernels](https://github.com/iree-org/iree/blob/main/docs/website/docs/community/blog/posts/microkernels.md)
+
+---
+
+## 15) Alternative compiler designs
+
+Helps to look at other projects solving the same problem, from a completely different angle.
+
+- **[P2] [tinygrad/tinygrad](https://github.com/tinygrad/tinygrad)**  
+  **Coverage:** Adjacent  
+  **Why it matters:** A working ML compiler in ~10k lines that uses a single UOp IR from tensor graph to linearized instructions, with all transformations driven by pattern-matching rewrites and no progressive lowering. 
